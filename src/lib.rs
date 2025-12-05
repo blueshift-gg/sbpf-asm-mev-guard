@@ -97,10 +97,7 @@ mod tests {
 
         let ix = create_update_mev_guard_ix(&PROGRAM_ID, &ADMIN, &guard);
 
-        println!("{:?}", ix);
-        
-        println!("{:?}", guard_acccount.data.len());
-
+        let expected_account_slice = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01];
 
         mollusk.process_and_validate_instruction(
                 &ix,
@@ -108,22 +105,25 @@ mod tests {
                     (guard, guard_acccount),
                     (ADMIN, Account::new(1_000_000_000, 0, &Address::default()))
                 ],
-                &[Check::success()]
+                &[
+                    Check::account(&guard).data_slice(0, &expected_account_slice).build(),
+                    Check::success()
+                ]
         );
     }
 
-    fn create_guard_account_ix(admin: &Address, program_id: &Address, guard: [u8;BITMAP_LEN]) -> Instruction {
-        let lamports = Rent::default().minimum_balance(guard.len());
-        create_account_with_seed(
-            admin,
-            &Address::create_with_seed(admin, "guard", program_id).expect("Invalid seed"),
-            admin,
-            "guard",
-            lamports,
-            guard.len() as u64,
-            program_id,
-        )
-    }
+    // fn create_guard_account_ix(admin: &Address, program_id: &Address, guard: [u8;BITMAP_LEN]) -> Instruction {
+    //     let lamports = Rent::default().minimum_balance(guard.len());
+    //     create_account_with_seed(
+    //         admin,
+    //         &Address::create_with_seed(admin, "guard", program_id).expect("Invalid seed"),
+    //         admin,
+    //         "guard",
+    //         lamports,
+    //         guard.len() as u64,
+    //         program_id,
+    //     )
+    // }
 
     fn create_check_slot_syscall_ix(program_id: &Address, guard: &Address) -> Instruction {
         Instruction::new_with_bytes(
