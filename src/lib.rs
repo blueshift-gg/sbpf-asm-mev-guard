@@ -23,11 +23,11 @@ mod tests {
 
         println!("{:?}", mollusk.sysvars.clock);
 
-        let (bitmap, bitmap_acccount) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 2, [0x00u8; BITMAP_LEN]);
+        let (guard, guard_account) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 2, [0x00u8; BITMAP_LEN]);
     
         let result = mollusk.process_and_validate_instruction(
-                &create_check_slot_syscall_ix(&PROGRAM_ID, &bitmap), 
-                &[(bitmap, bitmap_acccount)],
+                &create_check_slot_syscall_ix(&PROGRAM_ID, &guard), 
+                &[(guard, guard_account)],
                 &[Check::success()]
         );
         assert!(!result.program_result.is_err());
@@ -45,11 +45,11 @@ mod tests {
 
         println!("{:?}", mollusk.sysvars.clock);
 
-        let (bitmap, bitmap_acccount) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 2, [0xffu8; BITMAP_LEN]);
+        let (guard, guard_account) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 2, [0xffu8; BITMAP_LEN]);
     
         mollusk.process_and_validate_instruction(
-                &create_check_slot_syscall_ix(&PROGRAM_ID, &bitmap),
-                &[(bitmap, bitmap_acccount)],
+                &create_check_slot_syscall_ix(&PROGRAM_ID, &guard),
+                &[(guard, guard_account)],
                 &[Check::err(ProgramError::InvalidAccountData)]
         );
 
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn check_invalid_admin() {
-        let (bitmap, bitmap_acccount) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 1, [0x00u8; BITMAP_LEN]);
+        let (guard, guard_account) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 1, [0x00u8; BITMAP_LEN]);
     
         let mut mollusk = Mollusk::new(&PROGRAM_ID, "deploy/sbpf-asm-mev-guard");
 
@@ -73,9 +73,9 @@ mod tests {
         let fake_admin = Address::new_unique();
 
         mollusk.process_and_validate_instruction(
-                &create_update_mev_guard_ix(&PROGRAM_ID, &fake_admin, &bitmap), 
+                &create_update_mev_guard_ix(&PROGRAM_ID, &fake_admin, &guard), 
                 &[
-                    (bitmap, bitmap_acccount),
+                    (guard, guard_account),
                     (fake_admin, Account::new(1_000_000_000, 0, &Address::default()))
                 ],
                 &[Check::err(ProgramError::IncorrectAuthority)]
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn check_valid_admin() {
-        let (guard, guard_acccount) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 1, [0x00u8; BITMAP_LEN]);
+        let (guard, guard_account) = create_keyed_account_for_guard(&ADMIN, &PROGRAM_ID, 1, [0x00u8; BITMAP_LEN]);
     
         let mollusk = Mollusk::new(&PROGRAM_ID, "deploy/sbpf-asm-mev-guard");
 
@@ -102,7 +102,7 @@ mod tests {
         mollusk.process_and_validate_instruction(
                 &ix,
                 &[
-                    (guard, guard_acccount),
+                    (guard, guard_account),
                     (ADMIN, Account::new(1_000_000_000, 0, &Address::default()))
                 ],
                 &[
@@ -112,18 +112,19 @@ mod tests {
         );
     }
 
-    // fn create_guard_account_ix(admin: &Address, program_id: &Address, guard: [u8;BITMAP_LEN]) -> Instruction {
-    //     let lamports = Rent::default().minimum_balance(guard.len());
-    //     create_account_with_seed(
-    //         admin,
-    //         &Address::create_with_seed(admin, "guard", program_id).expect("Invalid seed"),
-    //         admin,
-    //         "guard",
-    //         lamports,
-    //         guard.len() as u64,
-    //         program_id,
-    //     )
-    // }
+    #[allow(unused)]
+    fn create_guard_account_ix(admin: &Address, program_id: &Address, guard: [u8;BITMAP_LEN]) -> Instruction {
+        let lamports = Rent::default().minimum_balance(guard.len());
+        create_account_with_seed(
+            admin,
+            &Address::create_with_seed(admin, "guard", program_id).expect("Invalid seed"),
+            admin,
+            "guard",
+            lamports,
+            guard.len() as u64,
+            program_id,
+        )
+    }
 
     fn create_check_slot_syscall_ix(program_id: &Address, guard: &Address) -> Instruction {
         Instruction::new_with_bytes(
